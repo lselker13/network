@@ -1,5 +1,6 @@
 #include<iostream>
 #include<Eigen/Dense>
+#include<assert.h>
 
 #include"network.h"
 
@@ -16,7 +17,7 @@ double Network::sigmoid_prime_simple(double x) {
 
 // activation function
 MatrixXd Network::af(MatrixXd input) {
-  return input.unaryExpr(&Network::sigmoid_simple);
+  return input.unaryExpr(&(Network::sigmoid_simple));
 }
 
 MatrixXd Network::af_prime(MatrixXd input) {
@@ -37,12 +38,15 @@ Network::Network(int n_layers, int* sizes) {
 Network::Network(int n_layers, int* sizes, MatrixXd* weights, VectorXd* biases) {
   Network::n_layers = n_layers;
   Network::sizes = sizes;
-  Network:: weights = weights;
+  Network::weights = weights;
   Network::biases = biases;
+  std::cout << "DEBUG construction: " << weights[0].size();
 }
 
 VectorXd Network::feed_forward(VectorXd a) {
+  std::cout << "DEBUG: started feeding forward " << weights[0].size();
   for(int source_layer = 0; source_layer < n_layers - 1; source_layer++) {
+    std::cout << "DEBUG: " << Network::weights[source_layer].size() << "\n";
     a = af((Network::weights[source_layer] * a) + Network::biases[source_layer]);
   }
   return a;
@@ -62,9 +66,8 @@ double Network::c(MatrixXd a, MatrixXd y) {
 }
 
 MatrixXd Network::c_prime(MatrixXd a, MatrixXd y) {
-  return a.binaryExpr(y, &Network::c_prime_simple);
+  return a.binaryExpr(y, &(Network::c_prime_simple));
 }
-
 
 // x is the input, y is the expected output
 Partials Network::backprop(VectorXd x, VectorXd y) {
@@ -78,7 +81,6 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
   // Feedforward, populate activations and weighted inputs, initialize errors
   for (int i = 0; i < n_layers - 1; i++) {
     errors[i] = VectorXd(sizes[i + 1]);
-
     weighted_inputs[i] = (weights[i] * activations[i]) + biases[i];
     activations[i + 1] = af(weighted_inputs[i]);
   }
@@ -93,7 +95,6 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
   for (int l = n_layers - 3; l >= 0; l--) {
     errors[l] = af_prime(weighted_inputs[l]).array()
         * (weights[l + 1].transpose() * errors[l + 1]).array();
-
   }
 
   MatrixXd weight_partials[n_layers - 1];
@@ -107,21 +108,45 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
   return Partials(weight_partials, errors);
 }
 
+// Take a set of inputs and truths, update based on average of partials
+void Network::update_batch(VectorXd* inputs, VectorXd* truths, int n_inputs, double rate) {
+  if(n_inputs == 0) {
+    return;
+  }
+  assert(inputs[0].size() == sizes[0]);
+  assert(truths[0].size() == sizes[n_layers - 1]);
+  Partials partials = backprop(inputs[0], truths[0]);
+  for(int i = 1; i < n_inputs; i++) {
+    assert(inputs[i].size() == sizes[0]);
+    assert(truths[i].size() == sizes[n_layers - 1]);
+    Partials d_partials = backprop(inputs[i], truths[i]);
+    for(int j = 0; j < n_layers - 1; j++) {
+      partials.weight_partials[j] = partials.weight_partials[j] + d_partials.weight_partials[j];
+      partials.bias_partials[j] = partials.bias_partials[j] + d_partials.bias_partials[j];
+    }
+  }
+  double adjustment = rate / n_inputs;
 
+  for(int j = 0; j < n_layers - 1; j++) {
+    weights[j] = weights[j] - (partials.weight_partials[j] * adjustment);
+    biases[j] = biases[j] - (partials.bias_partials[j] * adjustment);
+  }
 
-int main(void) {
-  int n_layers = 3;
-  int sizes[3] = {3,4,2};
-  Network network(n_layers, sizes);
-  Vector3d a(1,2,1);
-  VectorXd o = network.feed_forward(a);
-  std::cout << o << "\n";
+}
 
-  Partials p;
-  MatrixXd m = Matrix3d::Random();
-  p.weight_partials = &m;
-  VectorXd v = Vector3d::Random();
-  p.bias_partials = &v;
-  std::cout << "bp \n" << *p.weight_partials;
+// Does not use batch size yet - passes all inputs along
+void Network::train(VectorXd* inputs, VectorXd* truths, int n_inputs, double rate,
+                    int batch_size, int epochs) {
+  for(int c = 1; c < epochs; c++) {
+    update_batch(inputs, truths, n_inputs, rate);
+  }
+}
 
+double* Network::test(VectorXd* inputs, VectorXd* truths, int n_inputs, double* ret_dest) {
+  for(int i = 0; i < n_inputs; i++) {
+    assert(inputs[i].size() == sizes[0]);
+    assert(truths[i].size() == sizes[n_layers - 1]);
+    ret_dest[i] = c(feed_forward(inputs[i]), truths[i]);
+  }
+  return ret_dest;
 }
