@@ -40,13 +40,10 @@ Network::Network(int n_layers, int* sizes, MatrixXd* weights, VectorXd* biases) 
   Network::sizes = sizes;
   Network::weights = weights;
   Network::biases = biases;
-  std::cout << "DEBUG construction: " << weights[0].size();
 }
 
 VectorXd Network::feed_forward(VectorXd a) {
-  std::cout << "DEBUG: started feeding forward " << weights[0].size();
   for(int source_layer = 0; source_layer < n_layers - 1; source_layer++) {
-    std::cout << "DEBUG: " << Network::weights[source_layer].size() << "\n";
     a = af((Network::weights[source_layer] * a) + Network::biases[source_layer]);
   }
   return a;
