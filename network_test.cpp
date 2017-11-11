@@ -4,16 +4,18 @@
 #include<iostream>
 #include<assert.h>
 #include<Eigen/Dense>
+#include<vector>
 
 using namespace Eigen;
+using namespace std;
 // TODO: Use a testing libary
 
 std::unique_ptr<Network> network;
 
 int n_layers = 3;
-int sizes[3] = {3, 2, 1};
-MatrixXd weights[2];
-VectorXd biases[2];
+vector<int> sizes = {3, 2, 1};
+vector<MatrixXd> weights(2);
+vector<VectorXd> biases(2);
 double EPSILON = pow(10, -5);
 Vector3d input(1, 0, 1);
 double expected = 0.578862;
@@ -45,8 +47,8 @@ void test_feed_forward() {
 void test_backprop() {
   // Expected partials calculated at
   //https://docs.google.com/spreadsheets/d/1lhi0bSxK6XB0UcGM49ebSvdQIsgMAmlQDvZepGrECtg/edit?usp=sharing
-  MatrixXd weight_partials[2];
-  VectorXd bias_partials[2];
+  vector<MatrixXd> weight_partials(2);
+  vector<VectorXd> bias_partials(2);
   weight_partials[0] = Matrix<double, 2, 3>();
   weight_partials[0] << 0.00199092392, 0, 0.00199092392, 0.003646347771, 0, 0.003646347771;
   weight_partials[1] = Matrix<double, 1, 2>();
@@ -60,8 +62,8 @@ void test_backprop() {
   truth << 0.5;
   Partials partials = network -> backprop(input, truth);
   for(int i = 0; i < 2; i++) {
-    MatrixXd no_one_cares = partials.weight_partials[i];
-    std::cout << "DEBUG: " << i << " " << no_one_cares;
+    cout << "\n WEIGHT \n" << partials.weight_partials[i];
+    cout << "\n BIAS \n" << partials.bias_partials[i];
     // assert(partials.weight_partials[i].isApprox(expected_partials.weight_partials[i]));
     // assert(partials.bias_partials[i].isApprox(expected_partials.bias_partials[i]));
   }

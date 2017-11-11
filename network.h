@@ -2,26 +2,27 @@
 #define NETWORK_H
 
 #include<Eigen/Dense>
+#include<vector>
 using namespace Eigen;
+using namespace std;
 
 
 class Partials {
  public:
-  MatrixXd* weight_partials;
-  VectorXd* bias_partials;
+  vector<MatrixXd> weight_partials;
+  vector<VectorXd> bias_partials;
   Partials() {}
-  Partials(MatrixXd* weight_partials, VectorXd* bias_partials) {
+  Partials(vector<MatrixXd> weight_partials, vector<VectorXd> bias_partials) {
     Partials::weight_partials = weight_partials;
     Partials::bias_partials = bias_partials;
   }
 };
 
-
 class Network {
   int n_layers;
-  int* sizes;
-  MatrixXd* weights;
-  VectorXd* biases;
+  vector<int> sizes;
+  vector<MatrixXd> weights;
+  vector<VectorXd> biases;
 
   // Activation function
   static double sigmoid_simple(double x);
@@ -39,14 +40,15 @@ class Network {
 
  public:
 
-  Network(int n_layers, int* sizes);
-  Network(int n_layers, int* sizes, MatrixXd* weights, VectorXd* biases);
+  Network(int n_layers, vector<int> sizes);
+  Network(int n_layers, vector<int> sizes, vector<MatrixXd> weights, vector<VectorXd> biases);
   VectorXd feed_forward(VectorXd a);
   Partials backprop(VectorXd x, VectorXd y);
-  void update_batch(VectorXd* inputs, VectorXd* truths, int n_inputs, double rate);
-  void train(VectorXd* inputs, VectorXd* truths, int n_inputs,
+  void update_batch(vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs, double rate);
+  void train(vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs,
              double rate, int batch_size, int epochs);
-  double* test(VectorXd* inputs, VectorXd* truths, int n_inputs, double* ret_dest);
+  vector<double> test(
+      vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs, vector<double> ret_dest);
 
 };
 
