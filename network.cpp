@@ -5,6 +5,9 @@
 
 #include"network.h"
 
+// @author: Leo Selker
+
+
 using namespace Eigen;
 using namespace std;
 
@@ -24,6 +27,11 @@ MatrixXd Network::af(MatrixXd input) {
 
 MatrixXd Network::af_prime(MatrixXd input) {
   return input.unaryExpr(&Network::sigmoid_prime_simple);
+}
+
+Network::Network(int n_layers, int* sizes_array) {
+  vector<int> sizes(sizes_array, sizes_array + n_layers);
+  Network(n_layers, sizes);
 }
 
 Network::Network(int n_layers, vector<int> sizes) {
@@ -76,13 +84,11 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
   vector<VectorXd> errors(n_layers - 1);
   vector<VectorXd> weighted_inputs(n_layers - 1);
   activations[0] = x;
-  cout << "\n ACTIVATION\n" << activations[0];
   // Feedforward, populate activations and weighted inputs, initialize errors
   for (int i = 0; i < n_layers - 1; i++) {
     errors[i] = VectorXd(sizes[i + 1]);
     weighted_inputs[i] = (weights[i] * activations[i]) + biases[i];
     activations[i + 1] = af(weighted_inputs[i]);
-    cout << "\n ACTIVATION\n" << activations[i + 1];
   }
 
   // Compute error for last layer (special case b/c cost function)
@@ -90,13 +96,10 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
   VectorXd p_activation_weighted_input = af_prime(weighted_inputs[n_layers - 2]);
   errors[n_layers - 2] = p_activation_weighted_input.array()
       * c_prime(activations[n_layers - 1], y).array();
-  cout << "\n P_AF\n" << sigmoid_prime_simple(0.5788619707);
-  cout << "\n ERROR\n" << errors[n_layers - 2];
   // back-propogate to compute errors, starting w/ second to last layer
   for (int l = n_layers - 3; l >= 0; l--) {
     errors[l] = af_prime(weighted_inputs[l]).array()
         * (weights[l + 1].transpose() * errors[l + 1]).array();
-    cout << "\n ERROR \n" << errors[l];
   }
 
   vector<MatrixXd> weight_partials(n_layers - 1);
@@ -107,6 +110,7 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
   }
 
   // bias partials are equal to errors
+
   return Partials(weight_partials, errors);
 }
 
@@ -129,7 +133,6 @@ void Network::update_batch(
     }
   }
   double adjustment = rate / n_inputs;
-
   for(int j = 0; j < n_layers - 1; j++) {
     weights[j] = weights[j] - (partials.weight_partials[j] * adjustment);
     biases[j] = biases[j] - (partials.bias_partials[j] * adjustment);
@@ -140,8 +143,8 @@ void Network::update_batch(
 // Does not use batch size yet - passes all inputs along
 void Network::train(
     vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs,
-    double rate,int batch_size, int epochs) {
-  for(int c = 1; c < epochs; c++) {
+    double rate, int batch_size, int epochs) {
+  for(int c = 0; c < epochs; c++) {
     update_batch(inputs, truths, n_inputs, rate);
   }
 }

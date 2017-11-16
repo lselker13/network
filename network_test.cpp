@@ -6,9 +6,29 @@
 #include<Eigen/Dense>
 #include<vector>
 
+/**
+ * A small hand-verified regression test
+ * @author: Leo Selker
+ */
+
 using namespace Eigen;
 using namespace std;
 // TODO: Use a testing libary
+
+// Define test friend
+namespace unit_test {
+struct network_tester {
+  static vector<MatrixXd> get_weights(Network net) {
+    return net.weights;
+  }
+  static vector<VectorXd> get_biases(Network net) {
+    return net.biases;
+  }
+  static Partials backprop(Network net, Eigen::VectorXd x, Eigen::VectorXd y) {
+    return net.backprop(x, y);
+  }
+};
+}
 
 std::unique_ptr<Network> network;
 
@@ -16,14 +36,14 @@ int n_layers = 3;
 vector<int> sizes = {3, 2, 1};
 vector<MatrixXd> weights(2);
 vector<VectorXd> biases(2);
+
+Partials expected_partials;
+
+// TODO: Eliminate the need for this arbitrary value
 const double EPSILON = pow(10, -5);
+
 Vector3d input(1, 0, 1);
 double expected = 0.578862;
-
-
-vector<MatrixXd> weight_partials(2);
-vector<VectorXd> bias_partials(2);
-Partials expected_partials;
 
 
 void before() {
@@ -39,8 +59,14 @@ void before() {
 
   network.reset(new Network(n_layers, sizes, weights, biases));
 
-  // Expected partials calculated at
-  //https://docs.google.com/spreadsheets/d/1lhi0bSxK6XB0UcGM49ebSvdQIsgMAmlQDvZepGrECtg/edit?usp=sharing
+  /**
+   * Expected partials calculated at
+   * https://docs.google.com/spreadsheets/d/1lhi0bSxK6XB0UcGM49ebSvdQIsgMAmlQDvZepGrECtg/
+   * edit?usp=sharing
+   */
+
+  vector<MatrixXd> weight_partials(2);
+  vector<VectorXd> bias_partials(2);
   weight_partials[0] = Matrix<double, 2, 3>();
   weight_partials[0] << 0.003779871001, 0, 0.003779871001, 0.001737045593, 0, 0.001737045593;
   weight_partials[1] = Matrix<double, 1, 2>();
@@ -62,8 +88,8 @@ void test_feed_forward() {
 void test_backprop() {
   VectorXd truth = VectorXd(1);
   truth << 0.5;
-  Partials partials = network -> backprop(input, truth);
-  for(int i = 0; i < 2; i++) {
+  Partials partials = unit_test::network_tester::backprop(*network, input, truth);
+  for(int i = 0; i < n_layers - 1; i++) {
     assert(partials.weight_partials[i].isApprox(expected_partials.weight_partials[i], EPSILON));
     assert(partials.bias_partials[i].isApprox(expected_partials.bias_partials[i], EPSILON));
   }
@@ -74,17 +100,30 @@ void test_train() {
   // by the expected partials.
   vector<VectorXd> inputs = {input};
   VectorXd truth(1);
-  truth << expected;
+  truth << 0.5;
   vector<VectorXd> truths = {truth};
-  double rate = .1;
+  double rate = 1;
   int batch_size = 1; // Doesn't matter currently
   int epochs = 1;
   network -> train(inputs, truths, 1, rate, batch_size, epochs);
+
+  // Pull out the biases and weights using the test friend
+  vector<MatrixXd> new_weights = unit_test::network_tester::get_weights(*network);
+  vector<VectorXd> new_biases = unit_test::network_tester::get_biases(*network);
+
+
+  for(int i = 0; i < n_layers - 1; i++) {
+    MatrixXd expected_weights = weights[i] - expected_partials.weight_partials[i];
+    MatrixXd expected_biases = biases[i] - expected_partials.bias_partials[i];
+    assert(new_weights[i].isApprox(expected_weights, EPSILON));
+    assert(new_biases[i].isApprox(expected_biases, EPSILON));
+  }
 }
 
 int main(void) {
   before();
-  test_feed_forward();
-  test_backprop();
-  test_train();
+    test_feed_forward();
+    test_backprop();
+    test_train();
+    cout << "PASS\n";
 }

@@ -3,53 +3,63 @@
 
 #include<Eigen/Dense>
 #include<vector>
-using namespace Eigen;
-using namespace std;
 
+// @author: Leo Selker
+
+// To test private members (should not be used outside testing)
+namespace unit_test {
+struct network_tester;
+}
 
 class Partials {
  public:
-  vector<MatrixXd> weight_partials;
-  vector<VectorXd> bias_partials;
+  std::vector<Eigen::MatrixXd> weight_partials;
+  std::vector<Eigen::VectorXd> bias_partials;
   Partials() {}
-  Partials(vector<MatrixXd> weight_partials, vector<VectorXd> bias_partials) {
+  Partials(std::vector<Eigen::MatrixXd> weight_partials, std::vector<Eigen::VectorXd> bias_partials) {
     Partials::weight_partials = weight_partials;
     Partials::bias_partials = bias_partials;
   }
 };
 
 class Network {
+ private:
   int n_layers;
-  vector<int> sizes;
-  vector<MatrixXd> weights;
-  vector<VectorXd> biases;
+  std::vector<int> sizes;
+  std::vector<Eigen::MatrixXd> weights;
+  std::vector<Eigen::VectorXd> biases;
 
   // Activation function
   static double sigmoid_simple(double x);
   static double sigmoid_prime_simple(double x);
-  static MatrixXd af(MatrixXd input);
-  static MatrixXd af_prime(MatrixXd input);
+  static Eigen::MatrixXd af(Eigen::MatrixXd input);
+  static Eigen::MatrixXd af_prime(Eigen::MatrixXd input);
 
   // Cost function
   static double c_simple(double a, double y);
   // partial of elementwise cost w/r/t that output activation
   static double c_prime_simple(double a, double y);
-  static double c(MatrixXd a, MatrixXd y);
+  static double c(Eigen::MatrixXd a, Eigen::MatrixXd y);
   // vector of partials of cost function with respect to output activations
-  static MatrixXd c_prime(MatrixXd a, MatrixXd y);
+  static Eigen::MatrixXd c_prime(Eigen::MatrixXd a, Eigen::MatrixXd y);
+
+  Partials backprop(Eigen::VectorXd x, Eigen::VectorXd y);
+  void update_batch(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
+                    int n_inputs, double rate);
 
  public:
+  Network(int n_layers, int* sizes);
+  Network(int n_layers, std::vector<int> sizes);
+  Network(int n_layers, std::vector<int> sizes, std::vector<Eigen::MatrixXd> weights,
+          std::vector<Eigen::VectorXd> biases);
+  Eigen::VectorXd feed_forward(Eigen::VectorXd a);
+  void train(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
+             int n_inputs, double rate, int batch_size, int epochs);
+  std::vector<double> test(
+      std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
+      int n_inputs, std::vector<double> ret_dest);
 
-  Network(int n_layers, vector<int> sizes);
-  Network(int n_layers, vector<int> sizes, vector<MatrixXd> weights, vector<VectorXd> biases);
-  VectorXd feed_forward(VectorXd a);
-  Partials backprop(VectorXd x, VectorXd y);
-  void update_batch(vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs, double rate);
-  void train(vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs,
-             double rate, int batch_size, int epochs);
-  vector<double> test(
-      vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs, vector<double> ret_dest);
-
+  friend struct unit_test::network_tester;
 };
 
 #endif

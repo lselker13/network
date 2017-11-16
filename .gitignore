@@ -4,3 +4,9 @@ test
 *#
 *~
 *.el
+*.so
+*.gch
+*.o
+*.py
+*.pyc
+*.cxx
