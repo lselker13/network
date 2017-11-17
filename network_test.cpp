@@ -27,6 +27,19 @@ struct network_tester {
   static Partials backprop(Network net, Eigen::VectorXd x, Eigen::VectorXd y) {
     return net.backprop(x, y);
   }
+  /*  TODO: Figure out why this doesnt work
+  template<class T>
+  static Matrix<T, Dynamic, 1> to_eigen(vector<T> in) {
+    return Network::to_eigen<T>(in);
+  }
+  template<class T>
+  static vector<Matrix<T, Dynamic, 1> > map_to_eigen(vector<vector<T> > in) {
+    return Network::map_to_eigen<T>(in);
+  }
+  template<class T>
+  static vector<T> from_eigen(Matrix<T, Dynamic, 1> in) {
+    return Network::from_eigen<T>(in);
+    }*/
 };
 }
 
@@ -78,8 +91,23 @@ void before() {
   expected_partials = Partials(weight_partials, bias_partials);
 
 }
+/*
+void test_to_eigen() {
+  vector<int> in({1, 2, 3, 4, 5});
+  VectorXi exp(5);
+  exp << 1, 2, 3, 4, 5;
+  VectorXi result = unit_test::network_tester::to_eigen(in);
+  assert(result.isApprox(exp));
+}
 
-
+void test_from_eigen() {
+  VectorXi in(5);
+  in << 1, 2, 3, 4, 5;
+  vector<int> exp({1, 2, 3, 4, 5});
+  vector<int> result = unit_test::network_tester::from_eigen(in);
+  assert(exp == result);
+}
+*/
 void test_feed_forward() {
   VectorXd output = network -> feed_forward(input);
   assert(std::abs(expected - output(0)) < EPSILON);
@@ -122,8 +150,8 @@ void test_train() {
 
 int main(void) {
   before();
-    test_feed_forward();
-    test_backprop();
-    test_train();
-    cout << "PASS\n";
+  test_feed_forward();
+  test_backprop();
+  test_train();
+  cout << "PASS\n";
 }

@@ -7,6 +7,6 @@ test
 *.so
 *.gch
 *.o
-*.py
+network.py
 *.pyc
 *.cxx

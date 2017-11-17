@@ -47,17 +47,38 @@ class Network {
   void update_batch(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
                     int n_inputs, double rate);
 
+  template<class T>
+  static Eigen::Matrix<T, Eigen::Dynamic, 1> to_eigen(std::vector<T> in);
+
+  template<class T>
+  static std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1> > map_to_eigen(
+      std::vector<std::vector<T> > in);
+
+  template<class T>
+  static std::vector<T> from_eigen(Eigen::Matrix<T, Eigen::Dynamic, 1> in);
+
+
+
  public:
-  Network(int n_layers, int* sizes);
+
   Network(int n_layers, std::vector<int> sizes);
   Network(int n_layers, std::vector<int> sizes, std::vector<Eigen::MatrixXd> weights,
           std::vector<Eigen::VectorXd> biases);
+
+
   Eigen::VectorXd feed_forward(Eigen::VectorXd a);
+  std::vector<double> feed_forward(std::vector<double> a);
+
   void train(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
              int n_inputs, double rate, int batch_size, int epochs);
+  void train(std::vector< std::vector <double> > inputs, std::vector< std::vector<double> > truths,
+             int n_inputs, double rate, int batch_size, int epochs);
+
   std::vector<double> test(
-      std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
-      int n_inputs, std::vector<double> ret_dest);
+      std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths, int n_inputs);
+  std::vector<double> test(
+      std::vector<std::vector<double> > inputs, std::vector< std::vector<double> > truths,
+      int n_inputs);
 
   friend struct unit_test::network_tester;
 };

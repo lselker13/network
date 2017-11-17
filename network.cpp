@@ -7,7 +7,6 @@
 
 // @author: Leo Selker
 
-
 using namespace Eigen;
 using namespace std;
 
@@ -29,10 +28,6 @@ MatrixXd Network::af_prime(MatrixXd input) {
   return input.unaryExpr(&Network::sigmoid_prime_simple);
 }
 
-Network::Network(int n_layers, int* sizes_array) {
-  vector<int> sizes(sizes_array, sizes_array + n_layers);
-  Network(n_layers, sizes);
-}
 
 Network::Network(int n_layers, vector<int> sizes) {
   Network::n_layers = n_layers;
@@ -57,6 +52,11 @@ VectorXd Network::feed_forward(VectorXd a) {
     a = af((Network::weights[source_layer] * a) + Network::biases[source_layer]);
   }
   return a;
+}
+
+vector<double> Network::feed_forward(vector<double> a) {
+    VectorXd result = feed_forward(to_eigen(a));
+    return from_eigen(result);
 }
 
 double Network::c_simple(double a, double y) {
@@ -149,11 +149,45 @@ void Network::train(
   }
 }
 
-vector<double> Network::test(vector<VectorXd> inputs,vector<VectorXd> truths, int n_inputs, vector<double> ret_dest) {
+void Network::train(vector< vector <double> > inputs,
+                    vector<vector<double> > truths, int n_inputs,
+                    double rate, int batch_size, int epochs){
+  train(map_to_eigen(inputs), map_to_eigen(truths), n_inputs, rate, batch_size, epochs);
+}
+
+vector<double> Network::test(vector<VectorXd> inputs,vector<VectorXd> truths, int n_inputs) {
+  vector<double> ret(n_inputs);
   for(int i = 0; i < n_inputs; i++) {
     assert(inputs[i].size() == sizes[0]);
     assert(truths[i].size() == sizes[n_layers - 1]);
-    ret_dest[i] = c(feed_forward(inputs[i]), truths[i]);
+    ret[i] = c(feed_forward(inputs[i]), truths[i]);
   }
-  return ret_dest;
+  return ret;
+}
+
+vector<double> Network::test(vector<vector<double> > inputs, vector<vector<double> > truths,
+                             int n_inputs) {
+  return test(map_to_eigen(inputs), map_to_eigen(truths), n_inputs);
+}
+
+
+template<class T>
+Matrix<T, Dynamic, 1> Network::to_eigen(vector<T> in) {
+  Map<Eigen::Matrix<T, Dynamic, 1> > ret(in.data(), in.size());
+  return ret;
+}
+
+template<class T>
+vector<T> Network::from_eigen(Matrix<T, Dynamic, 1> in) {
+  vector<T> ret(in.data(), in.data() + in.rows() * in.cols());
+  return ret;
+}
+
+template<class T>
+vector<Matrix<T, Dynamic, 1> > Network::map_to_eigen(vector<vector<T> > in) {
+  vector<Matrix<T, Dynamic, 1> > ret(in.size());
+  for(int i = 1; i < in.size(); i++) {
+    ret[i] = to_eigen(in[i]);
+  }
+  return ret;
 }
