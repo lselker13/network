@@ -1,7 +1,9 @@
 #include<iostream>
 #include<Eigen/Dense>
+#include<algorithm>
 #include<assert.h>
 #include<vector>
+#include<random>
 
 #include"network.h"
 
@@ -10,24 +12,23 @@
 using namespace Eigen;
 using namespace std;
 
-double Network::sigmoid_simple(double x) {
+double Network::sigmoid_simple(const double &x) {
   double xexp = exp(-x);
   return 1/(1 + xexp);
 }
 
-double Network::sigmoid_prime_simple(double x) {
+double Network::sigmoid_prime_simple(const double &x) {
   return sigmoid_simple(x) * (1 - sigmoid_simple(x));
 }
 
 // activation function
-MatrixXd Network::af(MatrixXd input) {
+MatrixXd Network::af(const MatrixXd &input) {
   return input.unaryExpr(&(Network::sigmoid_simple));
 }
 
-MatrixXd Network::af_prime(MatrixXd input) {
+MatrixXd Network::af_prime(const MatrixXd &input) {
   return input.unaryExpr(&Network::sigmoid_prime_simple);
 }
-
 
 Network::Network(int n_layers, vector<int> sizes) {
   Network::n_layers = n_layers;
@@ -59,25 +60,25 @@ vector<double> Network::feed_forward(vector<double> a) {
     return from_eigen(result);
 }
 
-double Network::c_simple(double a, double y) {
+double Network::c_simple(const double &a, const double &y) {
   return pow(a - y, 2);
 }
 
-double Network::c_prime_simple(double a, double y) {
+double Network::c_prime_simple(const double &a, const double &y) {
   return 2 * (a - y);
 }
 
-double Network::c(MatrixXd a, MatrixXd y) {
+double Network::c(const MatrixXd &a, const MatrixXd &y) {
   MatrixXd costs = a.binaryExpr(y, &Network::c_simple);
   return costs.sum();
 }
 
-MatrixXd Network::c_prime(MatrixXd a, MatrixXd y) {
+MatrixXd Network::c_prime(const MatrixXd &a, const MatrixXd &y) {
   return a.binaryExpr(y, &(Network::c_prime_simple));
 }
 
 // x is the input, y is the expected output
-Partials Network::backprop(VectorXd x, VectorXd y) {
+Partials Network::backprop(const VectorXd &x, const VectorXd &y) {
   // Activations starts at layer 0, the input layer
   vector<VectorXd> activations(n_layers);
   // Errors and weighted uputs startt at layer 1, the first layer with weighted input
@@ -115,15 +116,24 @@ Partials Network::backprop(VectorXd x, VectorXd y) {
 }
 
 // Take a set of inputs and truths, update based on average of partials
+// TODO: Use an iterator
 void Network::update_batch(
-    vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs, double rate) {
-  if(n_inputs == 0) {
-    return;
+    const vector<VectorXd> &inputs, const vector<VectorXd> &truths,
+    vector<int>::iterator start, vector<int>::iterator end, double rate) {
+
+  assert(inputs.size() == truths.size());
+  vector<MatrixXd> weight_partials(n_layers - 1);
+  vector<VectorXd> bias_partials(n_layers - 1);
+  for (int i = 0; i < n_layers - 1; i++) {
+    weight_partials[i] = MatrixXd::Zero(sizes[i+1], sizes[i]);
+    bias_partials[i] = VectorXd::Zero(sizes[i+1]);
   }
-  assert(inputs[0].size() == sizes[0]);
-  assert(truths[0].size() == sizes[n_layers - 1]);
-  Partials partials = backprop(inputs[0], truths[0]);
-  for(int i = 1; i < n_inputs; i++) {
+  Partials partials(weight_partials, bias_partials);
+  int iterations = 0;
+  for(vector<int>::iterator it = start; it != end; it++) {
+    iterations++;
+    int i = *it;
+    assert(i < (int) inputs.size());
     assert(inputs[i].size() == sizes[0]);
     assert(truths[i].size() == sizes[n_layers - 1]);
     Partials d_partials = backprop(inputs[i], truths[i]);
@@ -132,7 +142,7 @@ void Network::update_batch(
       partials.bias_partials[j] = partials.bias_partials[j] + d_partials.bias_partials[j];
     }
   }
-  double adjustment = rate / n_inputs;
+  double adjustment = rate / iterations;
   for(int j = 0; j < n_layers - 1; j++) {
     weights[j] = weights[j] - (partials.weight_partials[j] * adjustment);
     biases[j] = biases[j] - (partials.bias_partials[j] * adjustment);
@@ -140,24 +150,35 @@ void Network::update_batch(
 
 }
 
-// Does not use batch size yet - passes all inputs along
 void Network::train(
-    vector<VectorXd> inputs, vector<VectorXd> truths, int n_inputs,
+    vector<VectorXd> inputs, vector<VectorXd> truths,
     double rate, int batch_size, int epochs) {
+  vector<int> indices(inputs.size());
+  int n_inputs = indices.size();
+  for(int i = 0; i < n_inputs; i++) {
+    indices[i] = i;
+  }
+  // TODO: Determine exact behavior/how deterministic this is
   for(int c = 0; c < epochs; c++) {
-    update_batch(inputs, truths, n_inputs, rate);
+    random_shuffle(indices.begin(), indices.end());
+    int start = 0;
+    int end = 0;
+    while(start < n_inputs) {
+      end = min(n_inputs, start + batch_size);
+      update_batch(inputs, truths, indices.begin() + start, indices.begin() + end, rate);
+      start = end;
+    }
   }
 }
 
 void Network::train(vector< vector <double> > inputs,
-                    vector<vector<double> > truths, int n_inputs,
-                    double rate, int batch_size, int epochs){
-  train(map_to_eigen(inputs), map_to_eigen(truths), n_inputs, rate, batch_size, epochs);
+                    vector<vector<double> > truths, double rate, int batch_size, int epochs){
+  train(map_to_eigen(inputs), map_to_eigen(truths), rate, batch_size, epochs);
 }
 
-vector<double> Network::test(vector<VectorXd> inputs,vector<VectorXd> truths, int n_inputs) {
-  vector<double> ret(n_inputs);
-  for(int i = 0; i < n_inputs; i++) {
+vector<double> Network::test(vector<VectorXd> inputs,vector<VectorXd> truths) {
+  vector<double> ret(inputs.size());
+  for(int i = 0; i < (int) inputs.size(); i++) {
     assert(inputs[i].size() == sizes[0]);
     assert(truths[i].size() == sizes[n_layers - 1]);
     ret[i] = c(feed_forward(inputs[i]), truths[i]);
@@ -165,9 +186,8 @@ vector<double> Network::test(vector<VectorXd> inputs,vector<VectorXd> truths, in
   return ret;
 }
 
-vector<double> Network::test(vector<vector<double> > inputs, vector<vector<double> > truths,
-                             int n_inputs) {
-  return test(map_to_eigen(inputs), map_to_eigen(truths), n_inputs);
+vector<double> Network::test(vector<vector<double> > inputs, vector<vector<double> > truths) {
+  return test(map_to_eigen(inputs), map_to_eigen(truths));
 }
 
 
@@ -186,7 +206,7 @@ vector<T> Network::from_eigen(Matrix<T, Dynamic, 1> in) {
 template<class T>
 vector<Matrix<T, Dynamic, 1> > Network::map_to_eigen(vector<vector<T> > in) {
   vector<Matrix<T, Dynamic, 1> > ret(in.size());
-  for(int i = 1; i < in.size(); i++) {
+  for(int i = 0; i < in.size(); i++) {
     ret[i] = to_eigen(in[i]);
   }
   return ret;

@@ -133,7 +133,7 @@ void test_train() {
   double rate = 1;
   int batch_size = 1; // Doesn't matter currently
   int epochs = 1;
-  network -> train(inputs, truths, 1, rate, batch_size, epochs);
+  network -> train(inputs, truths, rate, batch_size, epochs);
 
   // Pull out the biases and weights using the test friend
   vector<MatrixXd> new_weights = unit_test::network_tester::get_weights(*network);
