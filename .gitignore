@@ -10,3 +10,5 @@ test
 network.py
 *.pyc
 *.cxx
+benchmark
+data/mnist.pkl

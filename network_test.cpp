@@ -5,6 +5,7 @@
 #include<assert.h>
 #include<Eigen/Dense>
 #include<vector>
+#include<time.h>
 
 /**
  * A small hand-verified regression test
@@ -133,7 +134,7 @@ void test_train() {
   double rate = 1;
   int batch_size = 1; // Doesn't matter currently
   int epochs = 1;
-  network -> train(inputs, truths, 1, rate, batch_size, epochs);
+  network -> train(inputs, truths, rate, batch_size, epochs);
 
   // Pull out the biases and weights using the test friend
   vector<MatrixXd> new_weights = unit_test::network_tester::get_weights(*network);
@@ -148,10 +149,24 @@ void test_train() {
   }
 }
 
+void benchmark() {
+  vector<int> sizes = {784, 30, 10};
+  Network net(3, sizes);
+  VectorXd x = VectorXd::Random(784);
+  VectorXd y = VectorXd::Random(10);
+  time_t start = time(NULL);
+  for(int i = 0; i < 10000; i++) {
+    unit_test::network_tester::backprop(net, x, y);
+  }
+  time_t end = time(NULL);
+  cout << "Time to backprop 10000 times: " << difftime(start, end);
+}
+
 int main(void) {
   before();
   test_feed_forward();
   test_backprop();
   test_train();
+  benchmark();
   cout << "PASS\n";
 }

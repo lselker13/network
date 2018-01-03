@@ -30,22 +30,25 @@ class Network {
   std::vector<Eigen::VectorXd> biases;
 
   // Activation function
-  static double sigmoid_simple(double x);
-  static double sigmoid_prime_simple(double x);
-  static Eigen::MatrixXd af(Eigen::MatrixXd input);
-  static Eigen::MatrixXd af_prime(Eigen::MatrixXd input);
+  static double sigmoid_simple(const double &x);
+  static double sigmoid_prime_simple(const double &x);
+  static Eigen::MatrixXd af(const Eigen::MatrixXd &input);
+  static Eigen::MatrixXd af_prime(const Eigen::MatrixXd &input);
 
   // Cost function
-  static double c_simple(double a, double y);
+  static double c_simple(const double &a, const double &y);
   // partial of elementwise cost w/r/t that output activation
-  static double c_prime_simple(double a, double y);
-  static double c(Eigen::MatrixXd a, Eigen::MatrixXd y);
+  static double c_prime_simple(const double &a, const double &y);
+  static double c(const Eigen::MatrixXd &a, const Eigen::MatrixXd &y);
   // vector of partials of cost function with respect to output activations
-  static Eigen::MatrixXd c_prime(Eigen::MatrixXd a, Eigen::MatrixXd y);
+  static Eigen::MatrixXd c_prime(const Eigen::MatrixXd &a, const Eigen::MatrixXd &y);
 
-  Partials backprop(Eigen::VectorXd x, Eigen::VectorXd y);
-  void update_batch(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
-                    int n_inputs, double rate);
+  Partials backprop(const Eigen::VectorXd &x, const Eigen::VectorXd &y);
+
+  void update_batch(const std::vector<Eigen::VectorXd> &inputs,
+                    const std::vector<Eigen::VectorXd> &truths,
+                    std::vector<int>::iterator start,
+                    std::vector<int>::iterator end, double rate);
 
   template<class T>
   static Eigen::Matrix<T, Eigen::Dynamic, 1> to_eigen(std::vector<T> in);
@@ -56,6 +59,8 @@ class Network {
 
   template<class T>
   static std::vector<T> from_eigen(Eigen::Matrix<T, Eigen::Dynamic, 1> in);
+
+  static int i_max(Eigen::VectorXd in);
 
 
 
@@ -70,15 +75,18 @@ class Network {
   std::vector<double> feed_forward(std::vector<double> a);
 
   void train(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths,
-             int n_inputs, double rate, int batch_size, int epochs);
+             double rate, int batch_size, int epochs);
   void train(std::vector< std::vector <double> > inputs, std::vector< std::vector<double> > truths,
-             int n_inputs, double rate, int batch_size, int epochs);
+             double rate, int batch_size, int epochs);
 
   std::vector<double> test(
-      std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths, int n_inputs);
+      std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths);
   std::vector<double> test(
-      std::vector<std::vector<double> > inputs, std::vector< std::vector<double> > truths,
-      int n_inputs);
+      std::vector<std::vector<double> > inputs, std::vector< std::vector<double> > truths);
+
+  int n_correct(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths);
+  int n_correct(std::vector<std::vector<double> > inputs, std::vector< std::vector<double> > truths);
+
 
   friend struct unit_test::network_tester;
 };
