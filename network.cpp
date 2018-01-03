@@ -133,6 +133,7 @@ Partials Network::backprop(const VectorXd &x, const VectorXd &y) {
 }
 
 // Take a set of inputs and truths, update based on average of partials
+// TODO: Use an iterator
 void Network::update_batch(
     const vector<VectorXd> &inputs, const vector<VectorXd> &truths,
     vector<int>::iterator start, vector<int>::iterator end, double rate) {

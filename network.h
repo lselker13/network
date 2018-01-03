@@ -87,7 +87,6 @@ class Network {
   int n_correct(std::vector<Eigen::VectorXd> inputs, std::vector<Eigen::VectorXd> truths);
   int n_correct(std::vector<std::vector<double> > inputs, std::vector< std::vector<double> > truths);
 
-
   friend struct unit_test::network_tester;
 };
 
